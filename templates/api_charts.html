@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>图表样例</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+</head>
+<body>
+
+<div id="chart0" style="height: 500px;"></div>
+
+<script src="/static/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: '/static/js/'
+    }).use(['layer', 'form', 'element', 'carousel', 'echarts'], function () {
+        var layer = layui.layer
+            , form = layui.form
+            , element = layui.element
+            , carousel = layui.carousel
+            , echarts = layui.echarts;
+
+        //chart实例
+        var chartZhe = echarts.init(document.getElementById('chart0'));
+        var matchprice_data = [];
+        var time_data = [];
+        var pricemax = 0;
+        var pricemin = 9999;
+        /*var recloseprice_data = [];
+        var matchvol_data = [];
+        var askvol_data = [];
+        var matchincrease_data = [];
+        var matchmoney_data = [];
+        var hardenprice_data = [];
+        var limitdownprice_data = [];
+        var up_data = [];
+        var down_data = [];*/
+        /*var timemax = 91400;
+        var timemin = 93000;*/
+        {% for elem in queryset %}
+            var mp = {{ elem.matchprice }}
+                matchprice_data.push(mp);
+            if (mp > pricemax)
+                pricemax = mp;
+            if (mp < pricemin)
+                pricemin = mp;
+        {% endfor %}
+        if (pricemin > 0.2)
+            pricemin = pricemin - 0.2;
+        else
+            pricemin = 0;
+        {% for item in timelist %}
+            time_data.push("{{ item }}")
+        {% endfor %}
+        var mp_time_data = [];
+        let len = matchprice_data.length;
+        for (let i = 0; i < len; i++)
+            mp_time_data.push([time_data[i], matchprice_data[i]]);
+        //console.log(time_data)
+        var optionchart0 = {
+            dataZoom: {
+                    type: 'inside',
+                    show: true,
+                },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function (params) {
+
+                    //console.log(params)
+                    var res = "<div style='margin-bottom:5px;padding:0 12px;width:100%;height:24px;line-height:24px;border-radius:3px;'><p>" +
+                        params[0].value[0] +
+                        " </p></div>";
+                    for (var i = 0; i < params.length; i++) {
+                        res += `<div style="color: #fff;font-size: 14px; padding:0 12px;line-height: 24px">
+                        <span style="display:inline-block;margin-right:5px;border-radius:2px;width:10px;height:10px;background-color:${[
+                            params[i].color,
+                        ]};"></span>
+                        匹配价格:${params[i].value[1]}
+                        </div>`;
+                    }
+                    return res;
+
+                }
+            },
+            xAxis: {
+                name: 'time',
+                type: 'time',
+            },
+            yAxis: {
+                name: 'value',
+                type: 'value',
+                max: pricemax,
+                min: pricemin,
+            },
+            series: [
+                {
+                    data: mp_time_data,
+                    type: 'line'
+                }],
+        };
+        chartZhe.setOption(optionchart0, true);
+
+
+    });
+</script>
+
+</body>
+</html>

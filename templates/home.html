@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>系统主页</title>
+    {% load static %}
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+</head>
+<body>
+<ul class="layui-nav" lay-filter="">
+    <li class="layui-nav-item layui-this"><a href="">产品</a></li>
+    <li class="layui-nav-item"><a href="activity/">最新活动</a></li>
+    <li class="layui-nav-item"><a href="">联系我们</a></li>
+</ul>
+<div class="layui-carousel" id="test1" style="margin: 0 auto;">
+    <div carousel-item>
+        <div><img src="/static/image/lbtest1.jpeg" alt="" style="width: 100%; height: 100%;"></div>
+        <div><img src="/static/image/lbtest2.jpeg" alt="" style="width: 100%; height: 100%;"></div>
+        <div><img src="/static/image/lbtest3.jpeg" alt="" style="width: 100%; height: 100%;"></div>
+    </div>
+</div>
+<div class="layui-tab layui-tab-brief" lay-filter="docDemoTabBrief">
+    <ul class="layui-tab-title">
+        <li>产品详情</li>
+        <li class="layui-this">报价预览</li>
+        <li>应用实例</li>
+    </ul>
+    <div class="layui-tab-content" style="height: 500px;">
+        <div class="layui-tab-item" style="text-align: center">内容1</div>
+        <div class="layui-tab-item layui-show">
+            <div class="layui-btn-container">
+                <button type="button" class="layui-btn" lay-demotransferactive="getData">获取右侧数据</button>
+                <button type="button" class="layui-btn" lay-demotransferactive="reload">重载实例</button>
+            </div>
+            <div id="test7" class="demo-transfer"></div>
+        </div>
+        <div class="layui-tab-item" style="text-align: center">内容3</div>
+    </div>
+
+    <div class="layui-tab-content"></div>
+</div>
+
+<script src="/static/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: '/static/js/'
+    }).use(['layer', 'form', 'element', 'carousel', 'transfer',], function () {
+        var $ = layui.$
+            , layer = layui.layer
+            , form = layui.form
+            , element = layui.element
+            , carousel = layui.carousel
+            , transfer = layui.transfer
+            , util = layui.util;
+        //建造实例
+        //模拟数据
+        var data1 = [
+            {"value": "30001", "title": "name1"}
+            , {"value": "30002", "title": "name2"}
+            , {"value": "30003", "title": "name3"}
+            , {"value": "30004", "title": "name4"}
+            , {"value": "30005", "title": "name5", "disabled": true}
+            , {"value": "30006", "title": "name6"}
+            , {"value": "30007", "title": "name7"}
+            , {"value": "30008", "title": "name8"}
+            , {"value": "30009", "title": "name9"}
+        ]
+        carousel.render({
+            elem: '#test1'
+            , width: '100%' //设置容器宽度
+            , arrow: 'always' //始终显示箭头
+            //,anim: 'updown' //切换动画方式
+        });
+        //实例调用
+        transfer.render({
+            elem: '#test7'
+            , data: data1
+            , id: 'key123'
+            , height: 400
+            , width: '30%'
+            , showSearch: true//定义唯一索引
+        })
+        //批量办法定事件
+        util.event('lay-demoTransferActive', {
+            getData: function (othis) {
+                var getData = transfer.getData('key123'); //获取右侧数据
+                layer.alert(JSON.stringify(getData));
+            }
+            , reload: function () {
+                //实例重载
+                transfer.reload('key123', {
+                    title: ['list1', 'list2']
+                    , value: ['2', '5', '9']
+                    , showSearch: true
+                })
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>图表样例</title>
+    {% load static %}
+</head>
+<body>
+
+<div id="chart0" style="height: 800px;"></div>
+
+<script src="/static/echarts/echarts.js"></script>
+<script>
+    var chartZhe = echarts.init(document.getElementById('chart0'), 'dark');
+    //var chartZhu = echarts.init(document.getElementById('chart1'), 'dark');
+    var matchprice_data = [];
+    var matchvol_data = [];
+    var mv_abs_data = [];
+    var askvol_data = [];
+    var av_abs_data = [];
+    var time_data = [];
+    var pricemax = 0;
+    var pricemin = 9999;
+    var matchincrease_data = [];
+    var matchmoney_data = [];
+    var hardenprice_data = [];
+    var limitdownprice_data = [];
+    var up_data = [];
+    var down_data = [];
+    {% for elem in queryset %}
+        var mp = {{ elem.matchprice }};
+        matchprice_data.push(mp);
+        if (mp > pricemax)
+            pricemax = mp;
+        if (mp < pricemin)
+            pricemin = mp;
+        var mv = {{ elem.matchvol }};
+        var av = {{ elem.askvol }};
+        if (mv < 0)
+            mv_abs_data.push(-mv);
+        else
+            mv_abs_data.push(mv);
+        if (av < 0)
+            av_abs_data.push(-av);
+        else
+            av_abs_data.push(av);
+        matchvol_data.push(mv);
+        askvol_data.push(av);
+        matchincrease_data.push({{ elem.matchincrease }});
+        matchmoney_data.push({{ elem.matchmoney }});
+
+    {% endfor %}
+    if (pricemin > 0.2)
+        pricemin = pricemin - 0.2;
+    else
+        pricemin = 0;
+    {% for item in timelist %}
+        time_data.push("{{ item }}")
+    {% endfor %}
+    var mp_time_data = [];
+    var mv_time_data = [];
+    var av_time_data = [];
+    let len = matchprice_data.length;
+    for (let i = 0; i < len - 1; i++) {
+        mp_time_data.push([time_data[i], matchprice_data[i]]);
+        mv_time_data.push([time_data[i], mv_abs_data[i]]);
+        av_time_data.push([time_data[i], av_abs_data[i]]);
+    }
+
+    const colors = ['#ffffff', '#42d338', '#e11b1b', '#c5ce38', '#00DDFF', '#37A2FF', '#FFBF00'];
+    //console.log(time_data)
+    var option0 = {
+        backgroundColor: '#000000',
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross'
+            },
+            position: function (point, params, dom) {
+                return ['0%', '0%'];
+            },
+            backgroundColor: '#000000',
+            formatter: function (params) {
+                //console.log(params);
+                var mi_color = colors[0];
+                if (matchincrease_data[params[0].dataIndex] > 0)
+                    mi_color = colors[2];
+                else if (matchincrease_data[params[0].dataIndex] < 0)
+                    mi_color = colors[1];
+                else
+                    mi_color = colors[0];
+                var mv_color = colors[0];
+                var av_color = colors[0];
+                if (askvol_data[params[0].dataIndex] > 0)
+                    av_color = colors[2];
+                else if (askvol_data[params[0].dataIndex] < 0)
+                    av_color = colors[1];
+                else
+                    av_color = colors[0];
+                let res;
+                var timelist = params[0].axisValueLabel.split(' ');
+                var time = timelist[1];
+                res = '<div>' +
+                    '<div class="echarts-bar-tooltip" style="text-align: left; color: white">时间:</div>' + '<div style="color: #c5ce38;text-align: right">' + time + '</div>' +
+                    '<div style="text-align: left;color: white">匹配价格:</div>' + '<div style="color: #c5ce38;text-align: right">' + matchprice_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">竞价涨幅 :</div>' + '<div style="color:' + mi_color + ';text-align: right">' + matchincrease_data[params[0].dataIndex] + '%</div>' +
+                    '<div style="text-align: left;color: white">竞价量 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchvol_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">竞价金额 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchmoney_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">未匹配量:</div>' + '<div style="color:' + av_color + ';text-align: right">' + askvol_data[params[0].dataIndex] + '</div>' +
+                    '</div>';
+                return res;
+            }
+        },
+        axisPointer: { // 同时出现提示竖线
+            link: {xAxisIndex: 'all'}
+        },
+        toolbox: {
+            show: true,
+            orient: 'horizontal',      // 布局方式，默认为水平布局，可选为：
+                                       // 'horizontal' ¦ 'vertical'
+            x: 'right',                // 水平安放位置，默认为全图右对齐，可选为：
+                                       // 'center' ¦ 'left' ¦ 'right'
+                                       // ¦ {number}（x坐标，单位px）
+            y: 'top',                  // 垂直安放位置，默认为全图顶端，可选为：
+                                       // 'top' ¦ 'bottom' ¦ 'center'
+                                       // ¦ {number}（y坐标，单位px）
+            color: ['#1e90ff', '#22bb22', '#4b0082', '#d2691e'],
+            backgroundColor: 'rgba(0,0,0,0)', // 工具箱背景颜色
+            borderColor: '#ccc',       // 工具箱边框颜色
+            borderWidth: 0,            // 工具箱边框线宽，单位px，默认为0（无边框）
+            padding: 5,                // 工具箱内边距，单位px，默认各方向内边距为5，
+            showTitle: true,
+            feature: {
+                restore: {
+                    show: true,
+                    title: '还原',
+                    color: 'black'
+                },
+            }
+        },
+        calculable: true,
+        dataZoom: [
+            {
+                type: 'slider',
+                show: true,
+                realtime: true,
+                start: 0,
+                end: 100,
+                xAxisIndex: [0, 1, 2],
+            },
+            {
+                type: 'inside',
+                show: true,
+                realtime: true,
+                start: 0,
+                end: 100,
+                xAxisIndex: [0, 1, 2],
+            },
+        ],
+        xAxis: [
+            {
+                name: '',
+                type: 'time',
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'dotted'
+                    }
+                },
+                axisLine: {
+                    show: false,
+                },
+                axisTick: {
+                    show: false,  //刻度线
+                },
+                axisLabel: {
+                    show: false,//刻度标签
+                },
+                axisPointer: {
+                    show: true,
+                    type: 'line',
+                    // 坐标轴指示器的文本标签设置
+                    label: {
+                        show: false, // 是否显示文本标签。如果 tooltip.axisPointer.type 设置为 'cross' 则默认显示标签，否则默认不显示
+                    },
+                }
+            },
+            {
+                name: '',
+                type: 'time',
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'dotted'
+                    }
+                },
+                axisLine: {
+                    show: true, //隐藏y轴
+                    lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'solid'
+                    }
+                },
+                axisTick: {
+                    show: false,  //刻度线
+                },
+                axisLabel: {
+                    show: false,//刻度标签
+                },
+                gridIndex: 1,
+                position: 'top',
+                axisPointer: {
+                    show: true,
+                    type: 'line',
+                    // 坐标轴指示器的文本标签设置
+                    label: {
+                        show: false, // 是否显示文本标签。如果 tooltip.axisPointer.type 设置为 'cross' 则默认显示标签，否则默认不显示
+                    },
+                }
+            },
+            {
+                name: '时间',
+                type: 'time',
+                gridIndex: 2,
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'dotted'
+                    }
+                },
+            },
+        ],
+        yAxis: [
+            {
+                name: '',
+                type: 'value',
+                max: pricemax,
+                min: pricemin,
+                axisLine: {
+                    show: true,
+                    lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'dotted'
+                    }
+                },
+                axisLabel: {
+                    formatter: function (value, index) {
+                        return value.toFixed(2);
+                    }
+                },
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'solid'
+                    }
+                },
+            },
+            {
+                name: '',
+                type: 'value',
+                gridIndex: 1,
+                inverse: true,
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'solid'
+                    }
+                },
+            },
+            {
+                name: '',
+                type: 'value',
+                gridIndex: 2,
+                splitLine: {
+                    show: true, lineStyle: {
+                        color: ['red'],
+                        width: 0.4,
+                        type: 'solid'
+                    }
+                },
+            },
+        ],
+        grid: [{ // 调整每个图表的位置
+            top: '3%',
+            bottom: '66%',
+            left: '12%',
+        }, {
+            top: '36%',
+            bottom: '38%',
+            left: '12%',
+        },
+            {
+                top: '66%',
+                bottom: '10%',
+                left: '12%',
+            },],
+        series: [
+            {
+                data: mp_time_data,
+                type: 'line',
+                name: '匹配价格',
+                lineStyle: {
+                    color: colors[0],
+                    width: 0.5,
+                },
+                showSymbol: false,
+            },
+            {
+                name: '匹配数量',
+                type: 'bar',
+                showSymbol: false,
+                data: mv_time_data,
+                itemStyle: {
+                    normal: {
+                        color: function (farams) {
+                            if (matchvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
+                                return colors[2];
+                            } else {
+                                return colors[1];
+                            }
+                        }
+                    }
+                },
+                xAxisIndex: 2,
+                yAxisIndex: 2
+            },
+            {
+                name: '未匹配数量',
+                type: 'bar',
+                showSymbol: false,
+                data: av_time_data,
+                itemStyle: {
+                    normal: {
+                        color: function (farams) {
+                            if (askvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
+                                return colors[2];
+                            } else {
+                                return colors[1];
+                            }
+                        }
+                    }
+                },
+                xAxisIndex: 1,
+                yAxisIndex: 1
+            },
+        ],
+    };
+    chartZhe.setOption(option0, true);
+    let height = window.innerHeight * 0.96;
+    let width = window.innerWidth;
+    chartZhe.resize({height: height, width: width});
+    window.addEventListener("resize", function () {
+        let height = window.innerHeight * 0.96;
+        let width = window.innerWidth;
+        chartZhe.resize({height: height, width: width});
+    });
+
+</script>
+
+</body>
+</html>
