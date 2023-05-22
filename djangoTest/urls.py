@@ -31,7 +31,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.ad_home),
     path('activity/', views.usr_activity),
-    path('charts/', views.usr_charts),
     path('query/charts/', views.api_charts),
     path('api/login/', TokenObtainPairView.as_view(), name='token-obtain-pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

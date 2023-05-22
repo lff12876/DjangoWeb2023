@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
-from oAuth.models import User, OauthTestdata
+from oAuth.models import User, OauthTestdata, Oauth23testdata
 from rest_framework.response import Response
 
 from oAuth.serializer import UserSerializer
@@ -87,21 +87,15 @@ class UserViewSet(viewsets.ModelViewSet):
 #class LogoutViewSet(viewsets.ViewSet):
     #pass
 
-@csrf_exempt
 def user_logout(request):
     if request.method == 'GET':
-        return HttpResponse(status=404)
-    if request.method == 'POST':
         return HttpResponse(status=200)
+    if request.method == 'POST':
+        return HttpResponse(status=404)
 
 
 def ad_home(request):
     return render(request, "home.html")
-
-
-def usr_charts(request):
-    return render(request, "multichart.html")
-
 
 def usr_activity(request):
     return render(request, "activity.html")
@@ -109,7 +103,22 @@ def usr_activity(request):
 
 def api_charts(request):
     code = request.GET.get('code')
-    queryres = OauthTestdata.objects.all().values().filter(code=code)
+    date = request.GET.get('date')
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[-1].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    print(ip)
+    if date is None:
+        date = '2023-05-19'
+        date_str = '2023年5月19日'
+        date_value = 20230519
+    else:
+        dt = datetime.strptime(date, '%Y-%m-%d')
+        date_value = dt.year*10000+dt.month*100+dt.day
+        date_str = str(dt.year)+'年'+str(dt.month)+'月'+str(dt.day)+'日'
+    queryres = Oauth23testdata.objects.all().values().filter(code=code, date=date_value)
     time_list = []
     for item in queryres:
         date = item['date']
@@ -122,12 +131,13 @@ def api_charts(request):
         sec = time % 100
         dt = datetime(year=year,month=month,day=day,hour=hour,minute=minute,second=sec)
         time_list.append(str(dt))
-        #break
-        #time_list.append(dt)
 
     context = {
         'queryset': queryres,
         'timelist': time_list,
+        'code': code,
+        'date': date,
+        'date_str': date_str,
     }
     return render(request, "usr_echarts.html", context)
     #return  HttpResponse(queryres)

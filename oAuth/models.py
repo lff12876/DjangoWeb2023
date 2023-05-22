@@ -46,3 +46,24 @@ class OauthTestdata(models.Model):
         db_table = 'oauth_testdata'
         index_together = ["code", "date"]
 
+
+class Oauth23testdata(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    code = models.IntegerField(db_column='Code', blank=True, null=True)  # Field name made lowercase.
+    date = models.IntegerField(db_column='Date', blank=True, null=True)  # Field name made lowercase.
+    time = models.IntegerField(db_column='Time', blank=True, null=True)  # Field name made lowercase.
+    recloseprice = models.FloatField(db_column='ReClosePrice', blank=True, null=True)  # Field name made lowercase.
+    matchprice = models.FloatField(db_column='MatchPrice', blank=True, null=True)  # Field name made lowercase.
+    matchvol = models.IntegerField(db_column='MatchVol', blank=True, null=True)  # Field name made lowercase.
+    askvol = models.IntegerField(db_column='AskVol', blank=True, null=True)  # Field name made lowercase.
+    matchincrease = models.IntegerField(db_column='MatchIncrease', blank=True, null=True)  # Field name made lowercase.
+    matchmoney = models.FloatField(db_column='Matchmoney', blank=True, null=True)  # Field name made lowercase.
+    hardenprice = models.FloatField(db_column='HardenPrice', blank=True, null=True)  # Field name made lowercase.
+    limitdownprice = models.FloatField(db_column='LimitDownPrice', blank=True, null=True)  # Field name made lowercase.
+    up = models.FloatField(blank=True, null=True)
+    down = models.FloatField(blank=True, null=True)
+
+    class Meta:
+        managed = True
+        db_table = 'oauth_23testdata'
+        index_together = ["code", "date"]

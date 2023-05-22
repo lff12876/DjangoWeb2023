@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title>图表样例</title>
     {% load static %}
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
 </head>
 <body>
-
+<div>
+    <div>
+        <input type="text" class="layui-input" id="ID-laydate-demo" placeholder="点击选择日期" style="width: 100px;">
+    </div>
+    <div style="text-align:center;background-color: #0c0c0c;color: white">正在查看:{{ date_str }} {{ code }} </div>
+</div>
 <div id="chart0" style="height: 800px;"></div>
 
 <script src="/static/echarts/echarts.js"></script>
@@ -311,7 +317,17 @@
                     color: colors[0],
                     width: 0.5,
                 },
-                showSymbol: false,
+                itemStyle: {  //设置鼠标移入样式
+                    normal: {
+                        color: '#23a7e0',//外框颜色
+
+                    }, emphasis: {
+                        color: "#ecec2c",//移入后的颜色
+                    }
+                },
+                showSymbol: true,
+                symbol: 'circle',  //设定为实心点
+                symbolSize: 4,   //设定实心点的大小
             },
             {
                 name: '匹配数量',
@@ -361,6 +377,23 @@
         let height = window.innerHeight * 0.96;
         let width = window.innerWidth;
         chartZhe.resize({height: height, width: width});
+    });
+
+</script>
+<script src="/static/layui/layui.js"></script>
+<script>
+    layui.use(function () {
+        var laydate = layui.laydate;
+        // 渲染
+        laydate.render({
+            elem: '#ID-laydate-demo',
+            btns: [],
+            min: -30,
+            max: 0,
+            done: function (value) {
+                self.location = "http://localhost/query/charts/?code=" + "{{ code }}" + "&date=" + value;
+            }
+        });
     });
 
 </script>
