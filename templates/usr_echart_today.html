@@ -3,28 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>复盘数据</title>
+    <title>当日数据</title>
     {% load static %}
-    <link href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-y/layui/2.6.8/css/layui.css" type="text/css"
-          rel="stylesheet"/>
 </head>
 <body>
 <div>
-    <div class="layui-row" style="background-color: #0c0c0c;height: 20px">
-
-        <div class="layui-btn-container">
-            <button type="button" class="layui-btn" style="background-color: #0c2034" onclick="yesterday();">
-                <i class="layui-icon layui-icon-left"></i>
-            </button>
-            <button type="button" class="layui-btn" id="ID-laydate-demo" style="background-color: #0c2034">
-                <i class="layui-icon layui-icon-date"></i>
-            </button>
-            <button type="button" class="layui-btn" style="background-color: #0c2034" onclick="tomorrow();">
-                <i class="layui-icon layui-icon-right"></i>
-            </button>
-
-        </div>
-    </div>
     <div>
         <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }} </div>
     </div>
@@ -108,7 +91,6 @@
 
     const colors = ['#ffffff', '#42d338', '#e11b1b', '#c5ce38', '#00DDFF', '#37A2FF', '#FFBF00'];
     const grad_colors = ['#e53434', '#940ec5', '#ecec2c', '#1fc6ea'];
-    //console.log(time_data)
     var option0 = {
         backgroundColor: '#000000',
         tooltip: {
@@ -472,29 +454,6 @@
         chartZhe.resize({height: height, width: width});
     });
 
-</script>
-<script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-y/layui/2.6.8/layui.js"
-        type="application/javascript"></script>
-<script>
-    layui.use(function () {
-        var laydate = layui.laydate;
-        // 渲染
-        laydate.render({
-            elem: '#ID-laydate-demo',
-            btns: [],
-            done: function (value) {
-                self.location = "{{ jmp_str }}" + "&code="+ "{{ code }}" + "&date=" + value;
-            }
-        });
-    });
-
-    function yesterday() {
-        self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + "{{ yesterday_str }}";
-    }
-
-    function tomorrow() {
-        self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + "{{ tomorrow_str }}";
-    }
 </script>
 
 </body>

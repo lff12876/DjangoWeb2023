@@ -19,12 +19,16 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import routers
 
 from oAuth import views
-from oAuth.views import UserInfoViewSet, UserViewSet
+from oAuth.views import UserInfoViewSet, UserCreateViewSet, UserChangeViewSet, SecretKeyViewSet, LinkViewSet, IpViewSet
 
 router_V1 = routers.DefaultRouter()
 router_V1.register('info', UserInfoViewSet)
-router_V1.register('users', UserViewSet)
-
+router_V1.register('user/create', UserCreateViewSet)
+router_V1.register('user/active', UserCreateViewSet)
+router_V1.register('user_change_pwd', UserChangeViewSet)
+router_V1.register('secretkey', SecretKeyViewSet)
+router_V1.register('link', LinkViewSet)
+router_V1.register('ip', IpViewSet)
 
 urlpatterns = [
     path('api/', include(router_V1.urls)),
@@ -32,6 +36,7 @@ urlpatterns = [
     path('', views.ad_home),
     path('activity/', views.usr_activity),
     path('query/charts/', views.api_charts),
+    path('query/today/', views.api_charts_today),
     path('api/login/', TokenObtainPairView.as_view(), name='token-obtain-pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/logout/', views.user_logout),
