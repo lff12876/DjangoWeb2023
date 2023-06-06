@@ -20,6 +20,7 @@ from rest_framework import routers
 
 from oAuth import views
 from oAuth.views import UserInfoViewSet, UserCreateViewSet, UserChangeViewSet, SecretKeyViewSet, LinkViewSet, IpViewSet
+from django.views.generic import TemplateView
 
 router_V1 = routers.DefaultRouter()
 router_V1.register('info', UserInfoViewSet)
@@ -33,7 +34,7 @@ router_V1.register('ip', IpViewSet)
 urlpatterns = [
     path('api/', include(router_V1.urls)),
     path('admin/', admin.site.urls),
-    path('', views.ad_home),
+    path('', TemplateView.as_view(template_name="index.html")),
     path('activity/', views.usr_activity),
     path('query/charts/', views.api_charts),
     path('query/today/', views.api_charts_today),

@@ -16,6 +16,13 @@ import datetime
 import pytz
 from django.utils import timezone
 
+# 日期处理
+holidays = ['2023-04-29', '2023-04-30', '2023-05-01', '2023-05-02', '2023-05-03', '2023-06-22', '2023-06-23',
+            '2023-06-24', '2023-09-29', '2023-09-30', '2023-10-01', '2023-10-02', '2023-10-03', '2023-10-04',
+            '2023-10-05', '2023-10-06']
+min_date = datetime.datetime(year=2023, month=4, day=24)
+max_date = datetime.datetime.now()
+
 
 def convert_to_localtime(utctime):
     fmt = '%Y-%m-%d %H:%M:%S'
@@ -131,6 +138,7 @@ class UserChangeViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     http_method_names = ['patch']
+
     def update(self, request, *args, **kwargs):
         user_id = request.user.id
         instance = self.get_object()
@@ -210,7 +218,7 @@ class SecretKeyViewSet(viewsets.ModelViewSet):
                 last_change_time = instance.last_change_time
                 dt = datetime.datetime.now()
                 l_changetime = convert_to_local_datetime(last_change_time)
-                if (dt-l_changetime).seconds < 1800:
+                if (dt - l_changetime).seconds < 1800:
                     data['error'] = '修改间隔不能小于30分钟'
                     return Response(data, status.HTTP_400_BAD_REQUEST)
                 else:
@@ -348,9 +356,9 @@ def api_charts(request):
                     last_query_time = key_instance['last_query_time']
                     lq_time = convert_to_local_datetime(last_query_time)
                     cur_time = datetime.datetime.now()
-                    days = (cur_time-lq_time).days
-                    seconds = (cur_time-lq_time).seconds
-                    if days == 0 and seconds == 0 and (cur_time-lq_time).microseconds < 100000:
+                    days = (cur_time - lq_time).days
+                    seconds = (cur_time - lq_time).seconds
+                    if days == 0 and seconds == 0 and (cur_time - lq_time).microseconds < 100000:
                         key = OauthSecretKey.objects.get(id=key_instance['id'])
                         if key_instance['status'] == 0:
                             key.status = 1
@@ -370,17 +378,30 @@ def api_charts(request):
                     key.save()
                     if date is None:
                         dt = datetime.datetime.now()
+                        date = dt.strftime('%Y-%m-%d')
                         date_value = dt.year * 10000 + dt.month * 100 + dt.day
                         date_str = str(dt.year) + '年' + str(dt.month) + '月' + str(dt.day) + '日'
                     else:
                         dt = datetime.datetime.strptime(date, '%Y-%m-%d')
+                        date = dt.strftime('%Y-%m-%d')
                         date_value = dt.year * 10000 + dt.month * 100 + dt.day
                         date_str = str(dt.year) + '年' + str(dt.month) + '月' + str(dt.day) + '日'
-                    log = OauthQueryLog(uid=user, type=1, code=code, date=date_value, query_time=datetime.datetime.now(), ip=ip)
+                    log = OauthQueryLog(uid=user, type=1, code=code, date=date_value,
+                                        query_time=datetime.datetime.now(), ip=ip)
                     log.save()
                     queryres = OauthStockData.objects.all().values().filter(code=code, date=date_value)
                     yesterday = dt + datetime.timedelta(days=-1)
                     tomorrow = dt + datetime.timedelta(days=+1)
+                    while yesterday.weekday() == 5 or yesterday.weekday() == 6 or yesterday.strftime(
+                            '%Y-%m-%d') in holidays:
+                        yesterday = yesterday + datetime.timedelta(days=-1)
+                        if yesterday.date() <= min_date.date():
+                            yesterday = min_date
+                    while tomorrow.weekday() == 5 or tomorrow.weekday() == 6 or tomorrow.strftime(
+                            '%Y-%m-%d') in holidays:
+                        tomorrow = tomorrow + datetime.timedelta(days=+1)
+                        if tomorrow.date() >= max_date.date():
+                            tomorrow = max_date
                     yesterday_str = str(yesterday.year) + '-' + str(yesterday.month) + '-' + str(yesterday.day)
                     tomorrow_str = str(tomorrow.year) + '-' + str(tomorrow.month) + '-' + str(tomorrow.day)
                     time_list = []
@@ -395,7 +416,7 @@ def api_charts(request):
                         sec = time % 100
                         dt = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=sec)
                         time_list.append(str(dt))
-                    url = request.build_absolute_uri("/query/charts/?secretkey="+str(key_instance['value']))
+                    url = request.build_absolute_uri("/query/charts/?secretkey=" + str(key_instance['value']))
                     context = {
                         'queryset': queryres,
                         'timelist': time_list,
@@ -426,6 +447,7 @@ def api_charts(request):
         err_data['error'] = '密钥不存在'
     return render(request, "key_error.html", err_data)
 
+
 def api_charts_today(request):
     code = request.GET.get('code')
     secretkey = request.GET.get('secretkey')
@@ -453,7 +475,8 @@ def api_charts_today(request):
                     key.save()
                     dt = datetime.datetime.now()
                     date_value = dt.year * 10000 + dt.month * 100 + dt.day
-                    log = OauthQueryLog(uid=user, type=0, code=code, date=date_value, query_time=datetime.datetime.now(), ip=ip)
+                    log = OauthQueryLog(uid=user, type=0, code=code, date=date_value,
+                                        query_time=datetime.datetime.now(), ip=ip)
                     log.save()
                     date_str = str(dt.year) + '年' + str(dt.month) + '月' + str(dt.day) + '日'
                     queryres = OauthTodayData.objects.all().values().filter(code=code, date=20230505)
@@ -497,4 +520,3 @@ def api_charts_today(request):
     else:
         err_data['error'] = '密钥不存在'
     return render(request, "key_error.html", err_data)
-

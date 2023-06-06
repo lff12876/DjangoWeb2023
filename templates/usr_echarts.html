@@ -13,20 +13,20 @@
     <div class="layui-row" style="background-color: #0c0c0c;height: 20px">
 
         <div class="layui-btn-container">
-            <button type="button" class="layui-btn" style="background-color: #0c2034" onclick="yesterday();">
+            <button type="button" class="layui-btn" style="background-color: #393D49" onclick="yesterday();">
                 <i class="layui-icon layui-icon-left"></i>
             </button>
-            <button type="button" class="layui-btn" id="ID-laydate-demo" style="background-color: #0c2034">
+            <button type="button" class="layui-btn" id="ID-laydate-demo" style="background-color: #393D49">
                 <i class="layui-icon layui-icon-date"></i>
             </button>
-            <button type="button" class="layui-btn" style="background-color: #0c2034" onclick="tomorrow();">
+            <button type="button" class="layui-btn" style="background-color: #393D49" onclick="tomorrow();">
                 <i class="layui-icon layui-icon-right"></i>
             </button>
 
         </div>
     </div>
     <div>
-        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }} </div>
+        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }}</div>
     </div>
     <div id="chart0" style="height: 50%;"></div>
 </div>
@@ -476,17 +476,48 @@
 <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-y/layui/2.6.8/layui.js"
         type="application/javascript"></script>
 <script>
-    layui.use(function () {
-        var laydate = layui.laydate;
-        // 渲染
-        laydate.render({
-            elem: '#ID-laydate-demo',
+    var $ = layui.$
+    function formaDates() {
+        //获取table对象
+        var trElems = $(".layui-laydate-content").find('tr');
+        trElems.each(function () {//遍历tr
+            $(this).find('td').each(function (tdIndex, tdElem) {
+                //遍历td，index===0表示周日，index===6表示周六
+                if (tdIndex === 0 || tdIndex === 6) {
+                    // laydate-disabled是layui的样式类，添加后会禁用元素不可选择
+                    $(this).addClass('laydate-disabled');
+                }
+            });
+        });
+    }
+
+    var date_str = '{{ date }}'
+    var year_str = date_str.slice(0,4)
+    var month_str = date_str.slice(4,6)
+    var day_str = date_str.slice(6,8)
+
+
+    $(function () {
+//执行一个laydate实例
+        layui.laydate.render({
+           elem: '#ID-laydate-demo',
             btns: [],
+            theme: '#393D49',
+            calendar: true,
+            max:0,
+            min:'2023-4-20',
+            value:year_str+'-'+month_str+'-'+day_str,
             done: function (value) {
-                self.location = "{{ jmp_str }}" + "&code="+ "{{ code }}" + "&date=" + value;
+                self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + value;
+            },
+            ready: function () {
+                formaDates()
+            },
+            change: function (value, date, endDate) {
+                formaDates()
             }
         });
-    });
+    })
 
     function yesterday() {
         self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + "{{ yesterday_str }}";
