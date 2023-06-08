@@ -113,17 +113,23 @@ class UserCreateViewSet(viewsets.ModelViewSet):
         user_info.is_active = False
         if request.data['password'] == request.data['repassword']:
             user_info.set_password(request.data['password'])
-            user_info.save()
             code = user_info.code
             url = request.build_absolute_uri("/api/user/active/" + str(code) + "/")
             username = user_info.username
             subject = '账户激活-' + username
             from_email = settings.EMAIL_HOST_USER
             to_email = user_info.email
-            meg_html = '<a href="' + url + '">点击激活</a>'
-            send_mail(subject, meg_html, from_email, [to_email])
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            meg_html = '欢迎注册测试版系统，请访问您的专有链接以激活账户：' + url
+            if send_mail(subject, meg_html, from_email, [to_email]) == 1:
+                user_info.save()
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            else:
+                user_info.delete()
+                data = {
+                    'error': '邮件发送失败,当日注册人数可能已达上限'
+                }
+                return Response(data, status.HTTP_400_BAD_REQUEST)
         else:
             data = {
                 'error': '密码校验错误,请重试'
@@ -164,23 +170,32 @@ class SecretKeyViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = OauthSecretKey.objects.filter(uid=request.user.id)
-        instance = queryset.values()[0]
-        last_change_time = instance['last_change_time']
-        last_query_time = instance['last_query_time']
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            data = serializer.data
-            if last_change_time is not None:
-                lct = convert_to_localtime(last_change_time)
-                data[0]['last_change_time'] = lct
-            if last_query_time is not None:
-                lqt = convert_to_localtime(last_query_time)
-                data[0]['last_query_time'] = lqt
-            return self.get_paginated_response(serializer.data)
+        if len(queryset)>0:
+            instance = queryset.values()[0]
+            last_change_time = instance['last_change_time']
+            last_query_time = instance['last_query_time']
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                data = serializer.data
+                if last_change_time is not None:
+                    lct = convert_to_localtime(last_change_time)
+                    data[0]['last_change_time'] = lct
+                if last_query_time is not None:
+                    lqt = convert_to_localtime(last_query_time)
+                    data[0]['last_query_time'] = lqt
+                return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        else:
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         # get real ip address
@@ -266,6 +281,7 @@ class LinkViewSet(viewsets.ModelViewSet):
             data['base_url'] = request.build_absolute_uri("/query")
             return Response(data)
         else:
+            data['error'] = '您还没有密钥，请申请密钥后重试'
             return Response(data, status.HTTP_404_NOT_FOUND)
 
 
@@ -322,7 +338,10 @@ def api_charts(request):
     date = request.GET.get('date')
     secretkey = request.GET.get('secretkey')
     if secretkey is None:
-        return HttpResponse(status.HTTP_403_FORBIDDEN)
+        err_data = {
+            'error': '校验错误'
+        }
+        return render(request, "key_error.html", err_data)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[-1].strip()
@@ -452,7 +471,10 @@ def api_charts_today(request):
     code = request.GET.get('code')
     secretkey = request.GET.get('secretkey')
     if secretkey is None:
-        return HttpResponse(status.HTTP_403_FORBIDDEN)
+        err_data = {
+            'error': '校验错误'
+        }
+        return render(request, "key_error.html", err_data)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[-1].strip()
