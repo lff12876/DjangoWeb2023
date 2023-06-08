@@ -14,8 +14,7 @@ df = pd.DataFrame(tmp_lst[1:], columns=tmp_lst[0])
 
 if __name__ == '__main__':
     #print(df)
-    #engine = create_engine("mysql+mysqlconnector://root:adminroot933!17@localhost:3306/djangoweb?charset=utf8")
-    engine = create_engine("mysql+mysqlconnector://test:test;123@182.92.194.9:3306/djangoweb?charset=utf8")
+    engine = create_engine("mysql+mysqlconnector://root:adminroot933!17@localhost:3306/djangoweb?charset=utf8")
     con = engine.connect()
 
     df.to_sql(name="oauth_stockdata", con=engine, index=False, if_exists="append")
