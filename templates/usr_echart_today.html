@@ -4,18 +4,32 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title>当日数据</title>
+    <link href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-y/layui/2.6.8/css/layui.css" type="text/css"
+          rel="stylesheet"/>
     {% load static %}
 </head>
-<body>
+<body style="overflow:hidden">
 <div>
-    <div>
-        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }} </div>
+    <div class="layui-row" style="background-color: #0c0c0c;height: 20px">
+
+        <div class="layui-btn-container">
+        </div>
     </div>
-    <div id="chart0" style="height: 50%;"></div>
+    <div>
+        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }}</div>
+    </div>
+    <div id="chart0" style="height: 50%;width: 100%"></div>
+    <!--
+    <div>
+        <iframe class="iframe" id="iframe" src="">
+        </iframe>预留的iframe子窗口用于嵌入互动易
+    </div> -->
 </div>
 <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-y/echarts/5.3.0-rc.1/echarts.js"
         type="application/javascript"></script>
 <script>
+    //此页面类似user_echarts.html，移除了日期选择功能
+    var stockcode = "{{ code }}";
     var chartZhe = echarts.init(document.getElementById('chart0'), 'dark');
     //var chartZhu = echarts.init(document.getElementById('chart1'), 'dark');
     var matchprice_data = [];
@@ -34,10 +48,10 @@
     var down_data = [];
     var av_max = 0;
     var av_min = 0;
-    var av_max_index = 0;
-    var av_min_index = 0;
+    var av_max_index = -1;
+    var av_min_index = -1;
     var index = 0;
-    {% for item in timelist %}
+     {% for item in timelist %}
         time_data.push("{{ item }}")
     {% endfor %}
     {% for elem in queryset %}
@@ -46,16 +60,27 @@
         askvol_data.push({{ elem.askvol }});
         matchincrease_data.push({{ elem.matchincrease }});
         matchmoney_data.push({{ elem.matchmoney }});
+        hardenprice_data.push({{ elem.hardenprice }});
     {% endfor %}
+    var hardenprice = hardenprice_data[0];
+    let index920 = {{ index_920 }};
     let len = matchprice_data.length;
+    var mv_min = 0;
+    var mv_min_index = 0;
+    var mp_last_max_index = -1;
     for (let i = 0; i < len - 1; i++) {
         var mp = matchprice_data[i];
         var mv = matchvol_data[i];
         var av = askvol_data[i];
-        if (mp > pricemax)
+        if (mp > pricemax){
             pricemax = mp;
+            mp_last_max_index = index;
+        }
+        if (mp === pricemax)
+            mp_last_max_index = index;
         if (mp < pricemin)
             pricemin = mp;
+
         if (mv < 0)
             mv_abs_data.push(-mv);
         else
@@ -72,12 +97,41 @@
             av_min = av;
             av_min_index = index;
         }
+        if (mv < mv_min) {
+            mv_min = mv;
+            mv_min_index = index;
+        }
         index = index + 1;
+    }
+    var last_max_visible = 0;
+    if(matchprice_data[mp_last_max_index] === hardenprice)
+        last_max_visible = 1;
+    var max920 = 0;
+    var pointcolor920 = '#ffffff';
+    var lablecolor920 = '#000000';
+    if (len >= 2) {
+        if (index920 != 0) {
+            for (let i = index920; i < len - 1; i++) {
+                if (matchprice_data[i] > max920)
+                    max920 = matchprice_data[i];
+            }
+        }
+    }
+    console.log(index920);
+    console.log(max920);
+    var linevisible = 0;
+    if (len >= 2) {
+        if (matchprice_data[len - 2] == max920)
+            pointcolor920 = '#ecec2c';
+        if (matchprice_data[len - 2] == pricemax)
+            lablecolor920 = '#e11b1b';
+
     }
     var maxval = pricemax;
     var minval = pricemin;
-    if (pricemin > 0.2)
-        pricemin = pricemin - 0.2;
+    var distance = pricemax - pricemin
+    if (pricemin > distance)
+        pricemin = pricemin - distance;
     else
         pricemin = 0;
     var mp_time_data = [];
@@ -91,6 +145,19 @@
 
     const colors = ['#ffffff', '#42d338', '#e11b1b', '#c5ce38', '#00DDFF', '#37A2FF', '#FFBF00'];
     const grad_colors = ['#e53434', '#940ec5', '#ecec2c', '#1fc6ea'];
+
+    function fontSize(res) {//自适应字号
+        let clientHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+        if (!clientHeight) return;
+        let fontSize = 100 * (clientHeight / 1080);
+        console.log(res * fontSize);
+        if (res * fontSize > 15)
+            return 15;
+        else
+            return res * fontSize;
+    }
+
+    //console.log(time_data)
     var option0 = {
         backgroundColor: '#000000',
         tooltip: {
@@ -98,10 +165,15 @@
             axisPointer: {
                 type: 'cross'
             },
+            textStyle: {
+                fontSize: fontSize(0.28)
+            },
             position: function (point, params, dom) {
                 return ['0%', '0%'];
             },
-            backgroundColor: '#000000',
+            backgroundColor: 'rgba(31,11,11,0.75)',//通过设置rgba调节背景颜色与透明度
+            borderWidth: '0',
+            borderColor: '#e11b1b',
             formatter: function (params) {
                 //console.log(params);
                 var mi_color = colors[0];
@@ -122,15 +194,22 @@
                 let res;
                 var timelist = params[0].axisValueLabel.split(' ');
                 var time = timelist[1];
+                var oi_color = colors[0];
+                if (matchincrease_data[len - 1] > 0)
+                    oi_color = colors[2]
+                else if (matchincrease_data[len - 1] < 0)
+                    oi_color = colors[1];
+                else
+                    oi_color = colors[0];
                 res = '<div>' +
                     '<div class="echarts-bar-tooltip" style="text-align: left; color: white">时间:</div>' + '<div style="color: #c5ce38;text-align: right">' + time + '</div>' +
-                    '<div style="text-align: left;color: white">匹配价格:</div>' + '<div style="color: #c5ce38;text-align: right">' + matchprice_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">匹配价格:</div>' + '<div style="color:' + mi_color + ';text-align: right">' + matchprice_data[params[0].dataIndex] + '</div>' +
                     '<div style="text-align: left;color: white">竞价涨幅 :</div>' + '<div style="color:' + mi_color + ';text-align: right">' + matchincrease_data[params[0].dataIndex] + '%</div>' +
                     '<div style="text-align: left;color: white">竞价量 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchvol_data[params[0].dataIndex] + '</div>' +
                     '<div style="text-align: left;color: white">竞价金额 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchmoney_data[params[0].dataIndex] + '</div>' +
                     '<div style="text-align: left;color: white">未匹配量:</div>' + '<div style="color:' + av_color + ';text-align: right">' + askvol_data[params[0].dataIndex] + '</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘价格:</div>' + '<div style="color: #c5ce38;text-align: right">' + matchprice_data[len - 1] + '</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘涨幅 :</div>' + '<div style="color:' + '#c5ce38' + ';text-align: right">' + matchincrease_data[len - 1] + '%</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘价格:</div>' + '<div style="color:' + oi_color + ';text-align: right">' + matchprice_data[len - 1] + '</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘涨幅 :</div>' + '<div style="color:' + oi_color + ';text-align: right">' + matchincrease_data[len - 1] + '%</div>' +
                     '<div style="text-align: left;color: #1fc6ea">开盘量 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchvol_data[len - 1] + '</div>' +
                     '<div style="text-align: left;color: #1fc6ea">开盘金额 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchmoney_data[len - 1] + '</div>' +
                     '</div>';
@@ -140,6 +219,7 @@
         axisPointer: { // 同时出现提示竖线
             link: {xAxisIndex: 'all'}
         },
+        color: ['red', 'green'],
         legend: {
             data: ["最大匹配价格", "最小匹配价格"]
         },
@@ -267,7 +347,7 @@
             {
                 name: '',
                 type: 'value',
-                max: pricemax * 1.5 - pricemin * 0.5,
+                max: pricemax+distance,
                 min: pricemin,
                 axisLine: {
                     show: true,
@@ -319,16 +399,16 @@
         grid: [{ // 调整每个图表的位置
             top: '3%',
             bottom: '66%',
-            left: 88,
+            left: 100,
         }, {
             top: '36%',
             bottom: '38%',
-            left: 88,
+            left: 100,
         },
             {
                 top: '66%',
                 bottom: '10%',
-                left: 88,
+                left: 100,
             },],
         series: [
             {
@@ -347,11 +427,61 @@
                         color: "#ecec2c",//移入后的颜色
                     }
                 },
+                markPoint: {
+                    data: [
+                        {
+                            type: 'max',
+                            name: '最大值',
+                            symbol: "pin",
+                            symbolSize: 50,
+                            animation: true,
+                            label: {
+                                show: true,
+                                color: '#ffffff'
+                            },
+                            itemStyle: {color: '#f00'}
+                        },
+                        {
+                            type: 'min',
+                            name: '最小值',
+                            symbol: "pin",
+                            symbolSize: 50,
+                            animation: true,
+                            label: {
+                                show: true,
+                                color: '#ffffff'
+                            },
+                            itemStyle: {color: '#42d338'}
+                        },
+                        {
+                            name: "特殊值",
+                            value: matchprice_data[len - 2],
+                            xAxis: time_data[len - 2],
+                            yAxis: matchprice_data[len - 2],
+                            label: {
+                                show: true,
+                                color: lablecolor920
+                            },
+                            itemStyle: {color: pointcolor920}
+                        },
+                        {
+                            name: "last_max",
+                            value: matchprice_data[mp_last_max_index],
+                            xAxis: time_data[mp_last_max_index],
+                            yAxis: matchprice_data[mp_last_max_index],
+                            label: {
+                                show: true,
+                                color: "#ffffff"
+                            },
+                            itemStyle: {color: "#d56637",opacity:last_max_visible}
+                        },
+                    ]
+                },
                 showSymbol: true,
                 symbol: 'circle',  //设定为实心点
                 symbolSize: 4,   //设定实心点的大小
             },
-            { //这两组数据用来模拟markLine线段开关
+            { //这两组数据用来实现在legend中配置markLine线段开关
                 name: '最大匹配价格',
                 type: 'line',
                 markLine: {
@@ -359,7 +489,9 @@
                         {
                             name: '最大匹配价格',
                             yAxis: maxval,
+                            lineStyle: {color: 'red'},
                         }
+
                     ]
                 }
             },
@@ -369,10 +501,25 @@
                 markLine: {
                     data: [
                         {
-                            name: '最大匹配价格',
+                            name: '最小匹配价格',
                             yAxis: minval,
+                            lineStyle: {color: 'green'},
                         }
                     ]
+                }
+            },
+            {
+                name: '920',
+                type: 'line',
+                markLine: {
+                    symbol: ['arrow', 'circle'],
+                    data: [
+                        {
+                            name: '920',
+                            yAxis: max920,
+                            lineStyle: {color: 'yellow', opacity: linevisible},
+                        }
+                    ],
                 }
             },
             {
@@ -383,7 +530,7 @@
                 itemStyle: {
                     normal: {
                         color: function (farams) {
-                            if (matchvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
+                            if (askvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
                                 return colors[2];
                             } else {
                                 return colors[1];
@@ -399,6 +546,51 @@
                 type: 'bar',
                 showSymbol: false,
                 data: av_time_data,
+                markPoint: {
+                    data: [
+                        {
+                            name: "min",
+                            value: askvol_data[av_min_index],
+                            xAxis: time_data[av_min_index],
+                            yAxis: -askvol_data[av_min_index],
+                            label: {
+                                show: true,
+                                color: '#000000'
+                            },
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [{
+                                    offset: 0,
+                                    color: grad_colors[3],
+                                }, {
+                                    offset: 1,
+                                    color: grad_colors[2],
+                                }], false)
+                            }
+                        },
+                        {
+                            name: "max",
+                            value: askvol_data[av_max_index],
+                            xAxis: time_data[av_max_index],
+                            yAxis: askvol_data[av_max_index],
+                            label: {
+                                show: true,
+                                color: '#000000'
+                            },
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [{
+                                    offset: 0,
+                                    color: grad_colors[1],
+                                }, {
+                                    offset: 0.5,
+                                    color: "white",
+                                }, {
+                                    offset: 1,
+                                    color: grad_colors[0],
+                                }], false)
+                            }
+                        },
+                    ],
+                },
                 itemStyle: {
                     normal: {
                         color: function (farams) {
@@ -445,13 +637,12 @@
         ],
     };
     chartZhe.setOption(option0, true);
-    let height = window.innerHeight - 20;
-    let width = window.innerWidth - 12;
+    let height = window.innerHeight - 30;
+    let width = window.innerWidth;
     chartZhe.resize({height: height, width: width});
     window.addEventListener("resize", function () {
-        let height = window.innerHeight - 20;
-        let width = window.innerWidth - 12;
-        chartZhe.resize({height: height, width: width});
+        let height = window.innerHeight - 30;
+        let width = window.innerWidth;
     });
 
 </script>

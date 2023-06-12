@@ -8,7 +8,7 @@
     <link href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-y/layui/2.6.8/css/layui.css" type="text/css"
           rel="stylesheet"/>
 </head>
-<body>
+<body style="overflow:hidden">
 <div>
     <div class="layui-row" style="background-color: #0c0c0c;height: 20px">
 
@@ -26,34 +26,35 @@
         </div>
     </div>
     <div>
-        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }}</div>
+        <div style="text-align:center;background-color: #0c0c0c;color: white;">正在查看:{{ date_str }} {{ code }}</div><!--此处使用django模板语法，传递日期字符串和code -->
     </div>
-    <div id="chart0" style="height: 50%;"></div>
+    <div id="chart0" style="height: 100%;width: 100%"></div>
 </div>
 <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-y/echarts/5.3.0-rc.1/echarts.js"
-        type="application/javascript"></script>
+        type="application/javascript"></script><!--cdn加速链接 此处采用字节cdn-->
 <script>
     var chartZhe = echarts.init(document.getElementById('chart0'), 'dark');
     //var chartZhu = echarts.init(document.getElementById('chart1'), 'dark');
-    var matchprice_data = [];
-    var matchvol_data = [];
-    var mv_abs_data = [];
-    var askvol_data = [];
-    var av_abs_data = [];
-    var time_data = [];
-    var pricemax = 0;
+    var matchprice_data = [];//匹配价格数据
+    var matchvol_data = [];//匹配量数据
+    var mv_abs_data = [];//匹配两绝对值数据，使用绝对值绘制柱状图，使正负值在同侧
+    var askvol_data = [];//未匹配量
+    var av_abs_data = [];//未匹配量绝对值数据，使用绝对值绘制柱状图，使正负值在同侧
+    var time_data = [];//时间，用来绘制x轴
+    var pricemax = 0;//最值的初值，用来设置折线图y轴
     var pricemin = 9999;
-    var matchincrease_data = [];
-    var matchmoney_data = [];
-    var hardenprice_data = [];
-    var limitdownprice_data = [];
-    var up_data = [];
-    var down_data = [];
-    var av_max = 0;
-    var av_min = 0;
-    var av_max_index = 0;
-    var av_min_index = 0;
+    var matchincrease_data = [];//匹配涨幅
+    var matchmoney_data = [];//匹配金额
+    var hardenprice_data = [];//预留
+    var limitdownprice_data = [];//预留
+    var up_data = [];//预留
+    var down_data = [];//预留
+    var av_max = 0;//未匹配量最大值
+    var av_min = 0;//未匹配量最小值
+    var av_max_index = -1;//记录未匹配量最值序号，后续单独绘制此序号柱子颜色，根据此序号设置标点markpoint
+    var av_min_index = -1;
     var index = 0;
+    //下面使用模板传值
     {% for item in timelist %}
         time_data.push("{{ item }}")
     {% endfor %}
@@ -63,16 +64,27 @@
         askvol_data.push({{ elem.askvol }});
         matchincrease_data.push({{ elem.matchincrease }});
         matchmoney_data.push({{ elem.matchmoney }});
+        hardenprice_data.push({{ elem.hardenprice }});
     {% endfor %}
+    var hardenprice = hardenprice_data[0];
+    let index920 = {{ index_920 }};
     let len = matchprice_data.length;
+    var mv_min = 0;
+    var mv_min_index = 0;
+    var mp_last_max_index = -1;
     for (let i = 0; i < len - 1; i++) {
         var mp = matchprice_data[i];
         var mv = matchvol_data[i];
         var av = askvol_data[i];
-        if (mp > pricemax)
+        if (mp > pricemax){
             pricemax = mp;
+            mp_last_max_index = index;
+        }
+        if (mp === pricemax)
+            mp_last_max_index = index;
         if (mp < pricemin)
             pricemin = mp;
+
         if (mv < 0)
             mv_abs_data.push(-mv);
         else
@@ -89,17 +101,45 @@
             av_min = av;
             av_min_index = index;
         }
+        if (mv < mv_min) {
+            mv_min = mv;
+            mv_min_index = index;
+        }
         index = index + 1;
+    }
+    var last_max_visible = 0;
+    if(matchprice_data[mp_last_max_index] === hardenprice)
+        last_max_visible = 1;
+    var max920 = 0;
+    var pointcolor920 = '#ffffff';
+    var lablecolor920 = '#000000';
+    if(len>=2) {
+        if (index920 != 0) {
+            for (let i = index920; i < len - 1; i++) {
+                if (matchprice_data[i] > max920)
+                    max920 = matchprice_data[i];
+            }
+        }
+    }
+    console.log(index920);
+    console.log(max920);
+    var linevisible = 0;
+    if(len>=2) {
+        if (matchprice_data[len - 2] == max920)
+            pointcolor920 = '#ecec2c';
+            if (matchprice_data[len - 2] == pricemax)
+                lablecolor920 = '#e11b1b';
     }
     var maxval = pricemax;
     var minval = pricemin;
-    if (pricemin > 0.2)
-        pricemin = pricemin - 0.2;
+    var distance = pricemax-pricemin//极差计算
+    if (pricemin > distance)
+        pricemin = pricemin - distance;//y轴下限
     else
         pricemin = 0;
-    var mp_time_data = [];
-    var mv_time_data = [];
-    var av_time_data = [];
+    var mp_time_data = [];//真正放到echarts的series中的数据  折线图
+    var mv_time_data = [];//真正放到echarts的series中的数据  柱状图匹配量
+    var av_time_data = [];//真正放到echarts的series中的数据  柱状图未匹配量
     for (let i = 0; i < len - 1; i++) {
         mp_time_data.push([time_data[i], matchprice_data[i]]);
         mv_time_data.push([time_data[i], mv_abs_data[i]]);
@@ -108,49 +148,74 @@
 
     const colors = ['#ffffff', '#42d338', '#e11b1b', '#c5ce38', '#00DDFF', '#37A2FF', '#FFBF00'];
     const grad_colors = ['#e53434', '#940ec5', '#ecec2c', '#1fc6ea'];
+
+function fontSize(res){//自适应字号
+    	let clientHeight = window.innerHeight||document.documentElement.clientHeight||document.body.clientHeight;
+        if (!clientHeight) return;
+        let fontSize = 100 * (clientHeight / 1080);
+        console.log(res*fontSize);
+        if (res*fontSize>15)
+            return 15;
+        else
+            return res*fontSize;
+	}
+
     //console.log(time_data)
     var option0 = {
         backgroundColor: '#000000',
-        tooltip: {
+        tooltip: {//左侧的提示框配置
             trigger: 'axis',
             axisPointer: {
                 type: 'cross'
             },
-            position: function (point, params, dom) {
-                return ['0%', '0%'];
+            textStyle: {
+            	fontSize: fontSize(0.28)
             },
-            backgroundColor: '#000000',
-            formatter: function (params) {
+            extraCssText: 'letter-spacing:1px;',
+            position: function (point, params, dom) {
+                return ['0%', '0%'];//固定提示框始终在左侧
+            },
+            backgroundColor:'rgba(31,11,11,0.75)',//通过设置rgba调节背景颜色与透明度，前三个参数RGB，最后一个是透明度
+            borderWidth:'0',
+            borderColor:'#e11b1b',
+            formatter: function (params) {//formatter自定义tooltip
                 //console.log(params);
-                var mi_color = colors[0];
+                var mi_color = colors[0];//字体颜色 match increase color
                 if (matchincrease_data[params[0].dataIndex] > 0)
                     mi_color = colors[2];
                 else if (matchincrease_data[params[0].dataIndex] < 0)
                     mi_color = colors[1];
                 else
                     mi_color = colors[0];
-                var mv_color = colors[0];
-                var av_color = colors[0];
+                var mv_color = colors[0];// match volum color
+                var av_color = colors[0];// ask volum color
                 if (askvol_data[params[0].dataIndex] > 0)
                     av_color = colors[2];
                 else if (askvol_data[params[0].dataIndex] < 0)
                     av_color = colors[1];
                 else
                     av_color = colors[0];
-                let res;
+                let res;//提示框tooltip上显示的文本
                 var timelist = params[0].axisValueLabel.split(' ');
                 var time = timelist[1];
+                var oi_color = colors[0];
+                if (matchincrease_data[len - 1] > 0)
+                    oi_color = colors[2]
+                else if (matchincrease_data[len - 1] < 0)
+                    oi_color = colors[1];
+                else
+                    oi_color = colors[0];
                 res = '<div>' +
-                    '<div class="echarts-bar-tooltip" style="text-align: left; color: white">时间:</div>' + '<div style="color: #c5ce38;text-align: right">' + time + '</div>' +
-                    '<div style="text-align: left;color: white">匹配价格:</div>' + '<div style="color: #c5ce38;text-align: right">' + matchprice_data[params[0].dataIndex] + '</div>' +
-                    '<div style="text-align: left;color: white">竞价涨幅 :</div>' + '<div style="color:' + mi_color + ';text-align: right">' + matchincrease_data[params[0].dataIndex] + '%</div>' +
-                    '<div style="text-align: left;color: white">竞价量 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchvol_data[params[0].dataIndex] + '</div>' +
-                    '<div style="text-align: left;color: white">竞价金额 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchmoney_data[params[0].dataIndex] + '</div>' +
-                    '<div style="text-align: left;color: white">未匹配量:</div>' + '<div style="color:' + av_color + ';text-align: right">' + askvol_data[params[0].dataIndex] + '</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘价格:</div>' + '<div style="color: #c5ce38;text-align: right">' + matchprice_data[len - 1] + '</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘涨幅 :</div>' + '<div style="color:' + '#c5ce38' + ';text-align: right">' + matchincrease_data[len - 1] + '%</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘量 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchvol_data[len - 1] + '</div>' +
-                    '<div style="text-align: left;color: #1fc6ea">开盘金额 :</div>' + '<div style="color: #c5ce38;text-align: right">' + matchmoney_data[len - 1] + '</div>' +
+                    '<div class="echarts-bar-tooltip" style="text-align: left; color: white;float: ">时间:</div>' + '<div style="color: #c5ce38;text-align: left">' + time + '</div>' +
+                    '<div style="text-align: left;color: white">匹配价格:</div>' + '<div style="color:' + mi_color + ';text-align: left">' + matchprice_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">竞价涨幅 :</div>' + '<div style="color:' + mi_color + ';text-align: left">' + matchincrease_data[params[0].dataIndex] + '%</div>' +
+                    '<div style="text-align: left;color: white">竞价量 :</div>' + '<div style="color: #c5ce38;text-align:left">' + matchvol_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">竞价金额 :</div>' + '<div style="color: #c5ce38;text-align: left">' + matchmoney_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: white">未匹配量:</div>' + '<div style="color:' + av_color + ';text-align: left">' + askvol_data[params[0].dataIndex] + '</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘价格:</div>' + '<div style="color:' + oi_color + ';text-align: left">' + matchprice_data[len - 1] + '</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘涨幅 :</div>' + '<div style="color:' + oi_color + ';text-align: left">' + matchincrease_data[len - 1] + '%</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘量 :</div>' + '<div style="color: #c5ce38;text-align:left">' + matchvol_data[len - 1] + '</div>' +
+                    '<div style="text-align: left;color: #1fc6ea">开盘金额 :</div>' + '<div style="color: #c5ce38;text-align:left">' + matchmoney_data[len - 1] + '</div>' +
                     '</div>';
                 return res;
             }
@@ -158,10 +223,11 @@
         axisPointer: { // 同时出现提示竖线
             link: {xAxisIndex: 'all'}
         },
+        color: ['red', 'green'],
         legend: {
             data: ["最大匹配价格", "最小匹配价格"]
         },
-        toolbox: {
+        toolbox: {//工具箱，这里只用到了缩放的还原
             show: true,
             orient: 'horizontal',      // 布局方式，默认为水平布局，可选为：
                                        // 'horizontal' ¦ 'vertical'
@@ -178,7 +244,7 @@
             padding: 5,                // 工具箱内边距，单位px，默认各方向内边距为5，
             showTitle: true,
             feature: {
-                restore: {
+                restore: {//工具箱还原功能配置
                     show: true,
                     title: '还原',
                     color: 'black'
@@ -186,7 +252,7 @@
             }
         },
         calculable: true,
-        dataZoom: [
+        dataZoom: [//两种缩放，外部拖动和内部滚轮
             {
                 type: 'slider',
                 show: true,
@@ -204,11 +270,11 @@
                 xAxisIndex: [0, 1, 2],
             },
         ],
-        xAxis: [
+        xAxis: [//x轴配置
             {
                 name: '',
-                type: 'time',
-                splitLine: {
+                type: 'time',//时间类型的x轴
+                splitLine: {//网格线风格
                     show: true, lineStyle: {
                         color: ['red'],
                         width: 0.4,
@@ -233,7 +299,7 @@
                     },
                 }
             },
-            {
+            {//第二个x轴
                 name: '',
                 type: 'time',
                 splitLine: {
@@ -268,7 +334,7 @@
                     },
                 }
             },
-            {
+            {//第三个x轴
                 name: '时间',
                 type: 'time',
                 gridIndex: 2,
@@ -282,10 +348,10 @@
             },
         ],
         yAxis: [
-            {
+            {//第一个y轴
                 name: '',
                 type: 'value',
-                max: pricemax * 1.5 - pricemin * 0.5,
+                max: pricemax+distance,//最值设置
                 min: pricemin,
                 axisLine: {
                     show: true,
@@ -300,7 +366,7 @@
                         return value.toFixed(2);
                     }
                 },
-                splitLine: {
+                splitLine: {//分割线
                     show: true, lineStyle: {
                         color: ['red'],
                         width: 0.4,
@@ -308,7 +374,7 @@
                     }
                 },
             },
-            {
+            {//第二个y轴
                 name: '',
                 type: 'value',
                 gridIndex: 1,
@@ -321,7 +387,7 @@
                     }
                 },
             },
-            {
+            {//第三个y轴
                 name: '',
                 type: 'value',
                 gridIndex: 2,
@@ -337,18 +403,18 @@
         grid: [{ // 调整每个图表的位置
             top: '3%',
             bottom: '66%',
-            left: 88,
+            left: 100,
         }, {
             top: '36%',
             bottom: '38%',
-            left: 88,
+            left: 100,
         },
             {
                 top: '66%',
                 bottom: '10%',
-                left: 88,
+                left: 100,
             },],
-        series: [
+        series: [//数据
             {
                 data: mp_time_data,
                 type: 'line',
@@ -365,11 +431,61 @@
                         color: "#ecec2c",//移入后的颜色
                     }
                 },
-                showSymbol: true,
+                markPoint: {//标点
+                    data: [
+                        {
+                            type: 'max',
+                            name: '最大值',
+                            symbol: "pin",
+                            symbolSize: 50,
+                            animation: true,
+                            label: {
+                                show: true,
+                                color: '#ffffff'
+                            },
+                            itemStyle: {color: '#f00'}
+                        },
+                        {
+                            type: 'min',
+                            name: '最小值',
+                            symbol: "pin",
+                            symbolSize: 50,
+                            animation: true,
+                            label: {
+                                show: true,
+                                color: '#000000'
+                            },
+                            itemStyle: {color: '#42d338'}
+                        },
+                        {
+                            name: "特殊值",
+                            value: matchprice_data[len-2],
+                            xAxis: time_data[len-2],
+                            yAxis: matchprice_data[len-2],
+                            label: {
+                                show: true,
+                                color: lablecolor920
+                            },
+                            itemStyle: {color: pointcolor920}
+                        },
+                        {
+                            name: "last_max",
+                            value: matchprice_data[mp_last_max_index],
+                            xAxis: time_data[mp_last_max_index],
+                            yAxis: matchprice_data[mp_last_max_index],
+                            label: {
+                                show: true,
+                                color: "#ffffff"
+                            },
+                            itemStyle: {color: "#d56637",opacity:last_max_visible}
+                        },
+                    ]
+                },
+                showSymbol: true, //显示symbol
                 symbol: 'circle',  //设定为实心点
                 symbolSize: 4,   //设定实心点的大小
             },
-            { //这两组数据用来模拟markLine线段开关
+            { //这两组数据用来实现在legend中配置markLine线段开关
                 name: '最大匹配价格',
                 type: 'line',
                 markLine: {
@@ -377,7 +493,9 @@
                         {
                             name: '最大匹配价格',
                             yAxis: maxval,
+                            lineStyle: {color: 'red'},
                         }
+
                     ]
                 }
             },
@@ -387,10 +505,25 @@
                 markLine: {
                     data: [
                         {
-                            name: '最大匹配价格',
+                            name: '最小匹配价格',
                             yAxis: minval,
+                            lineStyle: {color: 'green'},
                         }
                     ]
+                }
+            },
+            {
+                name: '920',
+                type: 'line',
+                markLine: {
+                    symbol:['arrow', 'circle'],
+                    data: [
+                        {
+                            name: '920',
+                            yAxis: max920,
+                            lineStyle: {color: 'yellow', opacity: linevisible},
+                        }
+                    ],
                 }
             },
             {
@@ -401,7 +534,7 @@
                 itemStyle: {
                     normal: {
                         color: function (farams) {
-                            if (matchvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
+                            if (askvol_data[farams.dataIndex] > 0) { //根据真实数值正负显示不同柱形颜色
                                 return colors[2];
                             } else {
                                 return colors[1];
@@ -417,10 +550,51 @@
                 type: 'bar',
                 showSymbol: false,
                 data: av_time_data,
+                markPoint: {//未匹配量的标点
+                    data: [
+                        {
+                            name: "min",
+                            value: askvol_data[av_min_index],//显示负值
+                            xAxis: time_data[av_min_index],
+                            yAxis: -askvol_data[av_min_index],//位置为正值
+                            label: {
+                                show: true,
+                                color: '#000000'
+                            },
+                            itemStyle: {color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [{
+                                    offset: 0,
+                                    color: grad_colors[3],
+                                }, {
+                                    offset: 1,
+                                    color: grad_colors[2],
+                                }], false)}
+                        },
+                         {
+                            name: "max",
+                            value: askvol_data[av_max_index],
+                            xAxis: time_data[av_max_index],
+                            yAxis: askvol_data[av_max_index],
+                            label: {
+                                show: true,
+                                color: '#000000'
+                            },
+                            itemStyle: {color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [{
+                                        offset: 0,
+                                        color: grad_colors[1],
+                                    }, {
+                                        offset: 0.5,
+                                        color: "white",
+                                    }, {
+                                        offset: 1,
+                                        color: grad_colors[0],
+                                    }], false)}
+                        },
+                    ],
+                },
                 itemStyle: {
                     normal: {
                         color: function (farams) {
-                            if (len > 2 && farams.dataIndex === av_max_index) {
+                            if (len > 2 && farams.dataIndex === av_max_index) {//配置柱子渐变色
                                 if (av_max_index === len - 2)
                                     return new echarts.graphic.LinearGradient(0, 1, 0, 0, [{
                                         offset: 0,
@@ -462,13 +636,13 @@
             },
         ],
     };
-    chartZhe.setOption(option0, true);
-    let height = window.innerHeight - 20;
-    let width = window.innerWidth - 12;
+    chartZhe.setOption(option0, true);//设置图表大小
+    let height = window.innerHeight - 30;//为滚动datazoom预留30像素空间
+    let width = window.innerWidth;
     chartZhe.resize({height: height, width: width});
-    window.addEventListener("resize", function () {
-        let height = window.innerHeight - 20;
-        let width = window.innerWidth - 12;
+    window.addEventListener("resize", function () {//监听窗口大小变化，自适应大小
+        let height = window.innerHeight - 30;
+        let width = window.innerWidth;
         chartZhe.resize({height: height, width: width});
     });
 
@@ -477,7 +651,8 @@
         type="application/javascript"></script>
 <script>
     var $ = layui.$
-    function formaDates() {
+
+    function formaDates() {//layui laydate选择日期组件
         //获取table对象
         var trElems = $(".layui-laydate-content").find('tr');
         trElems.each(function () {//遍历tr
@@ -492,22 +667,21 @@
     }
 
     var date_str = '{{ date }}'
-    var year_str = date_str.slice(0,4)
-    var month_str = date_str.slice(4,6)
-    var day_str = date_str.slice(6,8)
+    var year_str = date_str.slice(0, 4)
+    var month_str = date_str.slice(4, 6)
+    var day_str = date_str.slice(6, 8)
 
 
     $(function () {
 //执行一个laydate实例
         layui.laydate.render({
-           elem: '#ID-laydate-demo',
+            elem: '#ID-laydate-demo',
             btns: [],
             theme: '#393D49',
             calendar: true,
-            max:0,
-            min:'2023-4-20',
-            value:year_str+'-'+month_str+'-'+day_str,
-            done: function (value) {
+            max: 0,//设置只能选择当天
+            min: '2023-4-20',//设置最小值
+            done: function (value) {//选择日期后的跳转
                 self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + value;
             },
             ready: function () {
@@ -519,11 +693,11 @@
         });
     })
 
-    function yesterday() {
+    function yesterday() {//跳转到前一天
         self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + "{{ yesterday_str }}";
     }
 
-    function tomorrow() {
+    function tomorrow() {//跳转到后一天
         self.location = "{{ jmp_str }}" + "&code=" + "{{ code }}" + "&date=" + "{{ tomorrow_str }}";
     }
 </script>

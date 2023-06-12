@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-
+#重要的设置文件，在此处进行全局配置
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,15 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-p-_=l-c51-g96wzoh9tla5ue-!5$mze=+3k=gjy0y4%)ww^kc_'
-
+#django项目密钥
 # SECURITY WARNING: don't run with debug turned on in production!
+#调试模式，部署时请设置DEBUG为False，设置为False后，Django将不再处理静态文件，转由IIS或Nginx代理静态文件
 DEBUG = True
-
+#允许的主机
 ALLOWED_HOSTS = ['*']
 
 
 # Application definition
-
+#rest_framework实现前后端分离开发
+#rest_framework_simplejwt进行身份验证
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,7 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
 ]
-
+#中间件配置处
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -54,13 +56,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'djangoTest.urls'
-
+#模板文件配置处， templates中是django原生, dist为打包后的vue项目
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / 'templates',
-                 BASE_DIR / 'dist']
-        ,
+                 BASE_DIR / 'dist'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -85,6 +86,8 @@ WSGI_APPLICATION = 'djangoTest.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+#mysql数据库配置
+#分别按照开发环境和部署环境配置即可
 DATABASES = {
     'default': {
         # 连接本地mysql数据库
@@ -100,7 +103,7 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
-
+#此处配置django admin中设置用户密码的限制条件
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -119,9 +122,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
-
+#语言设置
 LANGUAGE_CODE = 'zh-hans'
-
+#时区设置，注意此处的时区设置仅在admin界面生效，数据库中models.DateTimeField存储的仍为UTC时间，需要显示及运算时要做时区转换
 TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
@@ -133,8 +136,9 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-
+#静态文件目录
 STATIC_URL = '/static/'
+#STATIC_ROOT配置主要应用于部署时，python manage.py collectstatic命令会将静态文件打包到此目录
 STATIC_ROOT = 'D:\Coding\DjangoWebStatic\static'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(BASE_DIR, 'dist/static')]
@@ -142,30 +146,30 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
+#配置用户对应的model
 AUTH_USER_MODEL = 'oAuth.User'
-
+#DRF配置
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
-
+    # 仅允许授权的用户（登录的用户）访问DRF定义的API接口
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-
+    #分页配置
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
-
+    #DRF权限验证配置，此处设置为账号密码验证或token验证
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
-
+    #默认
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
 }
-
+#设置token时效和刷新时间
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -175,11 +179,11 @@ SIMPLE_JWT = {
 # 在settings.py中添加配置参数：
 
 # 用于发送邮件的邮箱
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'#默认backend
 EMAIL_USE_TLS = True  # 是否使用TLS安全传输协议(用于在两个通信应用程序之间提供保密性和数据完整性)
 EMAIL_USE_SSL = False  # 是否使用SSL加密，qq企业邮箱要求使用，163邮箱设置为True的时候会报ssl的错误
 EMAIL_HOST = 'smtp.163.com'  # 发送邮件的邮箱的SMTP服务器，这里用的是163邮箱
-EMAIL_PORT = 25  # 发件箱的SMTP服务器端口，默认是25
+EMAIL_PORT = 25  # 发件箱的SMTP服务器端口，默认是25 阿里云关闭了25端口，部署时使用465端口
 EMAIL_HOST_USER = ''  # 发送邮件的邮箱地址
 EMAIL_HOST_PASSWORD = ''  # 发送邮件的邮箱密码(这里使用的是授权码)
 

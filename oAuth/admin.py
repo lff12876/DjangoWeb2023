@@ -6,7 +6,7 @@ from oAuth.models import User,OauthSecretKey
 
 
 # Register your models here.
-
+#在此处配置django管理员后台
 class UserAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
